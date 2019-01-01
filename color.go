@@ -7,6 +7,10 @@ package color
 
 import (
 	"fmt"
+	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -293,8 +297,36 @@ func BackgroundBrightWhite(text string, args ...interface{}) string {
 	return hued.Proc(text, args...)
 }
 
+// Check if terminal supports colors
+func TermSupports() bool {
+	// Currently doesn't support windows
+	if runtime.GOOS == "windows" {
+		return false
+	}
+
+	out, err := exec.Command("tput", "colors").Output()
+
+	if err != nil {
+		return false
+	}
+
+	colors_supported_raw := strings.TrimSpace(fmt.Sprintf("%s", out))
+	colors_supported, err := strconv.Atoi(colors_supported_raw)
+
+	if err != nil {
+		return false
+	}
+
+	return colors_supported >= 127
+}
+
 // Color it!
 func (hue *colored) Proc(text string, args ...interface{}) string {
 	hue.text = fmt.Sprintf(text, args...)
+
+	if !TermSupports() {
+		return hue.text
+	}
+
 	return fmt.Sprintf("\u001b[%dm%s\u001b[0m", hue.attr, hue.text)
 }
